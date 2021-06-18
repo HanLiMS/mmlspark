@@ -1,6 +1,6 @@
 package com.microsoft.ml.spark.cognitive
 
-import com.azure.ai.textanalytics.models.{SentenceSentiment, SentimentConfidenceScores, TextAnalyticsRequestOptions}
+import com.azure.ai.textanalytics.models.{ExtractKeyPhraseResult, KeyPhrasesCollection, SentenceSentiment, SentimentConfidenceScores, TextAnalyticsRequestOptions, TextAnalyticsWarning}
 import com.azure.ai.textanalytics.{TextAnalyticsClient, TextAnalyticsClientBuilder}
 import com.azure.core.credential.AzureKeyCredential
 import com.microsoft.ml.spark.core.contracts.{HasConfidenceScoreCol, HasInputCol}
@@ -185,8 +185,64 @@ class TextSentimentV4(override val textAnalyticsOptions: Option[TextAnalyticsReq
       Some(textSentimentResultCollection.getModelVersion))
   }
 }
+
+object TextAnalyticsKeyphraseExtraction extends ComplexParamsReadable[TextAnalyticsKeyphraseExtraction]
+
+class TextAnalyticsKeyphraseExtraction (override val textAnalyticsOptions: Option[TextAnalyticsRequestOptions] = None,
+                                        override val uid: String = randomUID("TextAnalyticsKeyphraseExtraction"))
+  extends TextAnalyticsSDKBase[ExtractedKeyphraseV4](textAnalyticsOptions)
+    with HasConfidenceScoreCol {
+  logClass()
+
+  override def outputSchema: StructType =  KeyPhraseResponseV4.schema
+
+  override protected val invokeTextAnalytics: String => TAResponseV4[ExtractedKeyphraseV4] = (text: String) =>
+  {
+    val ExtractKeyPhrasesResultCollection = textAnalyticsClient.extractKeyPhrasesBatch(
+      Seq(text).asJava, "en", textAnalyticsOptions.orNull)
+    val tester = 5
+    val keyPhraseExtractionResult = ExtractKeyPhrasesResultCollection.asScala.head
+
+    val keyPhraseDocument = keyPhraseExtractionResult.getKeyPhrases();
+
+      val keyphraseResult = if (keyPhraseExtractionResult.isError) {
+      None
+    } else {
+      Some(ExtractedKeyphraseV4(
+        keyPhraseDocument.asScala.toList,
+        keyPhraseDocument.getWarnings.asScala.toList.map(
+          item => TAWarningV4(item.getMessage, item.getWarningCode.toString)
+        ),
+        ))
+    }
+
+    val error = if (keyPhraseExtractionResult.isError) {
+      val error = keyPhraseExtractionResult.getError
+      Some(TAErrorV4(error.getErrorCode.toString, error.getMessage, error.getTarget))
+    } else {
+      None
+    }
+
+    val stats = Option(keyPhraseExtractionResult.getStatistics) match {
+      case Some(s) => Some(DocumentStatistics(s.getCharacterCount, s.getTransactionCount))
+      case None => None
+    }
+
+    TAResponseV4[ExtractedKeyphraseV4](
+      keyphraseResult,
+      error,
+      stats,
+      Some(ExtractKeyPhrasesResultCollection.getModelVersion))
+  }
+}
+
+
+object KeyPhraseResponseV4 extends SparkBindings[TAResponseV4[ExtractedKeyphraseV4]]
 object DetectLanguageResponseV4 extends SparkBindings[TAResponseV4[DetectedLanguageV4]]
 object SentimentResponseV4 extends SparkBindings[TAResponseV4[SentimentScoredDocumentV4]]
+
+case class ExtractedKeyphraseV4(keyPhrases: List[String], warning: List[TAWarningV4])
+
 
 case class TAResponseV4[T](result: Option[T],
                            error: Option[TAErrorV4],

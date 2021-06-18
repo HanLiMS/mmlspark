@@ -37,6 +37,7 @@ class TextAnalyticsSDKSuite extends TestBase with DataFrameEquality with TextKey
   }
 }
 class TextSentimentSuiteV4 extends TestBase with DataFrameEquality with TextKey {
+
   import spark.implicits._
 
   lazy val df: DataFrame = Seq(
@@ -52,7 +53,7 @@ class TextSentimentSuiteV4 extends TestBase with DataFrameEquality with TextKey 
     .setEndpoint("https://test-v2-endpoints.cognitiveservices.azure.com/")
     .setInputCol("text")
 
-  test("foo"){
+  test("foo") {
     detector.transform(df).printSchema()
   }
   test("Basic Usage") {
@@ -60,5 +61,23 @@ class TextSentimentSuiteV4 extends TestBase with DataFrameEquality with TextKey 
       .select("textSentiment")
       .collect()
     assert(replies(0).getString(0) == "positive" && replies(1).getString(0) == "negative")
+  }
+
+  lazy val extractor: TextAnalyticsKeyphraseExtraction = new TextAnalyticsKeyphraseExtraction(options)
+    .setSubscriptionKey("29e438c2cc004ca2a49c6fd10a4f65fe")
+    .setEndpoint("https://test-v2-endpoints.cognitiveservices.azure.com/")
+    .setInputCol("text")
+
+  test("kpe foo") {
+    extractor.transform(df).printSchema()
+  }
+
+
+  test("Basic KPE Usage") {
+    val replies = extractor.transform(df)
+      .select("keyPhrases")
+      .collect()
+
+    assert(replies(0).getSeq[String](0).toSet === Set("Hello world", "input text"))
   }
 }
