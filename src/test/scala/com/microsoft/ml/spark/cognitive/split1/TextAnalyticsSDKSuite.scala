@@ -78,6 +78,7 @@ class TextSentimentSuiteV4 extends TestBase with DataFrameEquality with TextKey 
       .select("keyPhrases")
       .collect()
 
+    println(replies)
     assert(replies(0).getSeq[String](0).toSet === Set("Hello world", "input text"))
   }
 }
