@@ -24,7 +24,7 @@ abstract class TextAnalyticsSDKBase[T](val textAnalyticsOptions: Option[TextAnal
   with HasEndpoint with HasSubscriptionKey with HasLangCol
   with ComplexParamsWritable with BasicLogging {
 
-  protected val invokeTextAnalytics: (String, Option[String]) => TAResponseV4[T]
+  protected val invokeTextAnalytics: (String, String) => TAResponseV4[T]
 
   protected def outputSchema: StructType
 
@@ -86,8 +86,8 @@ class TextAnalyticsLanguageDetection(override val textAnalyticsOptions: Option[T
 
   override def outputSchema: StructType = DetectLanguageResponseV4.schema
 
-  override protected val invokeTextAnalytics: (String, Option[String]) => TAResponseV4[DetectedLanguageV4] =
-    (text: String, language: Option[String]) =>
+  override protected val invokeTextAnalytics: (String, String) => TAResponseV4[DetectedLanguageV4] =
+    (text: String, language: String) =>
     {
       val detectLanguageResultCollection = textAnalyticsClient.detectLanguageBatch(
         Seq(text).asJava, null, textAnalyticsOptions.orNull)
@@ -143,13 +143,11 @@ class TextAnalyticsKeyphraseExtraction (override val textAnalyticsOptions: Optio
 
   override def outputSchema: StructType =  KeyPhraseResponseV4.schema
 
-  override protected val invokeTextAnalytics: (String, Option[String]) => TAResponseV4[KeyphraseV4] = (text: String,
-    language: Option[String]) =>
+  override protected val invokeTextAnalytics: (String, String) => TAResponseV4[KeyphraseV4] = (text: String,
+    language: String) =>
   {
-    val langs = Seq(language).asJava
-    val txt = Seq(text).asJava
     val ExtractKeyPhrasesResultCollection = textAnalyticsClient.extractKeyPhrasesBatch(
-      Seq(text).asJava,language.getOrElse("en"), textAnalyticsOptions.orNull)
+      Seq(text).asJava,language, textAnalyticsOptions.orNull)
     val keyPhraseExtractionResult = ExtractKeyPhrasesResultCollection.asScala.head
     val keyPhraseDocument = keyPhraseExtractionResult.getKeyPhrases()
 

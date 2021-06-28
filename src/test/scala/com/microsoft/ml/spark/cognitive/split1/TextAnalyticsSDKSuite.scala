@@ -42,18 +42,19 @@ class TextAnalyticsSDKSuite extends TestBase with DataFrameEquality with TextKey
   ).toDF("langCol","text2")
 
   lazy val extractor: TextAnalyticsKeyphraseExtraction = new TextAnalyticsKeyphraseExtraction(options)
-    .setSubscriptionKey(textKey)
-    .setEndpoint("https://ta-internshipconnector.cognitiveservices.azure.com/")
+    .setSubscriptionKey("29e438c2cc004ca2a49c6fd10a4f65fe")
+    .setEndpoint("https://test-v2-endpoints.cognitiveservices.azure.com/")
     .setInputCol("text2")
+    .setLangCol("langCol")
 
   test("Basic KPE Usage") {
     val replies = extractor.transform(df2)
-      .show()
-//      .select("keyPhrases")
-//      .collect()
-//    assert(replies(0).getSeq[String](0).toSet === Set("Hello world", "input text"))
-//    assert(replies(1).getSeq[String](0).toSet === Set("land", "sheer weight",
-//      "gravity", "way", "Glaciers", "ice", "huge rivers"))
-//    assert(replies(2).getSeq[String](0).toSet === Set("carretera", "tráfico", "día"))
+      //.show()
+      .select("keyPhrases")
+      .collect()
+    assert(replies(0).getSeq[String](0).toSet === Set("Hello world", "input text"))
+    assert(replies(1).getSeq[String](0).toSet === Set("land", "sheer weight",
+      "gravity", "way", "Glaciers", "ice", "huge rivers"))
+    assert(replies(2).getSeq[String](0).toSet === Set("mucho tráfico", "carretera", "ayer"))
   }
 }
